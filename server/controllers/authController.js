@@ -187,8 +187,19 @@ const verifyEmail = async (req,res)=>{
 }
 }
 
+//check wether the user is verified or not
+const isAuthenticated =  async (req,res)=>{
+    try{
+        return res.status(200).json({isAuthenticated:true})
+    }catch(error){
+        return res.status(500).json({
+            message:error.message
+        })
+    }
+}
 
 
 
 
-export {register, login,logout,sendVerifyEmail,verifyEmail}
+
+export {register, login,logout,sendVerifyEmail,verifyEmail,isAuthenticated}
