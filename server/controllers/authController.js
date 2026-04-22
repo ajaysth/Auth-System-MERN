@@ -117,8 +117,78 @@ const logout = async (req,res)=>{
     }
 }
 
+const sendVerifyEmail = async (req,res)=>{
+    try{
+        const {userId} = req.body;
+        const user = await userModel.findById(userId);
+        if(user.isAccountVerified){
+            return res.json({message:"Account already verified"});
+        }
+
+        const otp = String(Math.floor(100000+(Math.random()*900000)))
+        user.verifyOtp = otp;
+        user.verifyOtpExpiresAt = Date.now() + 24*60*60*1000;
+        
+        await user.save();
+
+        const mailOptions = {
+            from : process.env.SENDER_EMAIL,
+            to: user.email,
+            subject:"Account Verification - MERN Auth System",
+            text:`Hi ${user.name},\n\nYour OTP for account verification is: ${otp}. It will expire in 24 hours.\n\nBest regards,\nMERN Auth Team`
+
+        }
+        await transporter.sendMail(mailOptions);
+
+        return res.status(200).json({message:"Verification email sent successfully"})
+
+    }catch(error){
+        return res.status(500).json({
+            message:error.message
+        })
+    }
+}
+
+
+const verifyEmail = async (req,res)=>{
+    const {userId,otp}= req.body;
+
+    if(!userId || !otp){
+        return res.status(400).json({message:"Please provide userId and otp"});
+    }
+
+    try{
+        const user = await userModel.findById(userId);
+
+        if(!user){
+            return res.status(400).json({message:"Invalid userId. User not found"});
+        }
+
+        if(user.verifyOtp === "" || user.verifyOtp !== otp){
+            return res.status(400).json({message:"Invalid OTP"});
+        }
+
+        if (user.verifyOtpExpiresAt < Date.now()){
+            return res.status(400).json({message:"OTP has expired. Please request a new one."});
+        }
+
+        user.isAccountVerified = true;
+        user.verifyOtp = "";
+        user.verifyOtpExpiresAt = 0;
+
+        await user.save();
+
+        return res.status(200).json({message:"Account verified successfully"})
+
+    }catch(error){
+    return res.status(500).json({
+        message:error.message
+    })
+}
+}
 
 
 
 
-export {register, login,logout}
+
+export {register, login,logout,sendVerifyEmail,verifyEmail}
