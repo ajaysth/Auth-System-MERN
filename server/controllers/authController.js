@@ -198,8 +198,81 @@ const isAuthenticated =  async (req,res)=>{
     }
 }
 
+//send password reset otp
+const sendResetOtp = async (req,res)=>{
+    const {email} = req.body;
+    if(!email){
+        return res.status(400).json({message:"Please provide email"});
+    }
+    try{
+        const user = await userModel.findOne({email:email});
+        if(!user){
+            return res.status(400).json({message:"User not found"});
+        }
+
+        const otp = String(Math.floor(100000+(Math.random()*900000)))
+        user.resetOtp = otp;
+        user.resetOtpExpiresAt = Date.now() + 15*60*1000;
+
+        await user.save();
+        
+        const mailOptions = {
+            from : process.env.SENDER_EMAIL,
+            to: user.email,
+            subject:"Password Reset OTP - MERN Auth System",
+            text:`Hi ${user.name},\n\nYour OTP for password reset is: ${otp}. It will expire in 15 minutes.\n\nBest regards,\nMERN Auth Team`
+
+        }
+        await transporter.sendMail(mailOptions);
+
+        return res.status(200).json({message:"Reset OTP sent successfully"})
+
+    }catch(error){
+        return res.status(500).json({
+            message:error.message
+        })
+    }
+
+}
+
+const resetPassword = async (req,res)=>{
+    const {otp,email,resetPassword} = req.body;
+    
+    if(!otp || !email || !resetPassword){
+        return res.status(400).json({message:"Please provide otp,email and new password"});
+    }
+
+    try{
+        const user  = await userModel.findOne({email:email});
+        if(!user){
+            return res.status(400).json({message:"User not found"});
+        }
+
+        if(user.resetOtp === "" || user.resetOtp !== otp){
+            return res.status(400).json({message:"Invalid OTP"});
+        }
+
+        if(user.resetOtpExpiresAt < Date.now()){
+            return res.status(400).json({message:"OTP has expired. Please request a new one."});
+        }
+
+        const hashedPassword = await bcrypt.hash(resetPassword,10);
+        user.password= hashedPassword
+        user.resetOtp = "";
+        user.resetOtpExpiresAt = 0;
+
+        await user.save();
+
+        return res.status(200).json({message:"Password reset successful"})
+
+    }catch(error){
+        return res.status(500).json({
+            message:error.message
+        })
+    }
+}
 
 
 
 
-export {register, login,logout,sendVerifyEmail,verifyEmail,isAuthenticated}
+export {register, login,logout,sendVerifyEmail,verifyEmail,isAuthenticated,sendResetOtp,resetPassword}
