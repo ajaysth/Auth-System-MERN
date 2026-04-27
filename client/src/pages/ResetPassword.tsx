@@ -102,7 +102,7 @@ const ResetPassword = () => {
         e.preventDefault();
 
         try {
-            const finalOtp = otp.join("");   // ✅ FIX HERE
+            const finalOtp = otp.join("");
 
             const { data } = await axios.post(backend_url + "/api/auth/reset-password", { email, otp: finalOtp, resetPassword: newPassword })
             if (data.success) {
