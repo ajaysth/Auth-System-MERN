@@ -1,16 +1,69 @@
 import { useState } from "react"
 import { assets } from "../assets/assets"
-import App from '../App';
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "react-toastify"
+import { useAppContext } from "../context/useAppContext";
+import type { FormEvent } from "react";
 
 const Login = () => {
     const navigate = useNavigate()
+    const { backend_url, setIsLoggedIn, getUserData } = useAppContext()
 
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
 
     const [state, setState] = useState("Sign Up")
+
+
+    const onSubmitHandler = async (e: FormEvent) => {
+        e.preventDefault()
+        try {
+
+            axios.defaults.withCredentials = true
+            if (state === "Sign Up") {
+                const { data } = await axios.post(`${backend_url}/api/auth/register`, {
+                    name, email, password
+                })
+
+                if (data.success) {
+                    setIsLoggedIn(true)
+                    await getUserData()
+                    toast.success("Registered successfully")
+                    navigate("/")
+                } else {
+                    toast.error(data.message)
+                }
+            } else {
+                const { data } = await axios.post(`${backend_url}/api/auth/login`, {
+                    email, password
+                })
+
+                if (data.success) {
+
+                    setIsLoggedIn(true)
+                    await getUserData()
+                    toast.success("LoggedIn successfully")
+                    navigate("/")
+                } else {
+                    toast.error(data.message)
+                }
+
+            }
+
+
+        } catch (err) {
+            console.log(err)
+            if (err instanceof Error) {
+                toast.error(err.message);
+            } else if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.message || "Server error");
+            } else {
+                toast.error("Something went wrong");
+            }
+        }
+    }
     return (
         <div className="flex items-center justify-center min-h-screen px-0 sm:p-6 bg-gradient-to-br from-red-300">
             <img onClick={() => navigate("/")} src={assets.logo} className="absolute left-20 md:left-5 top-5 w-32 cursor-pointer md:w-28" alt="" />
@@ -19,7 +72,7 @@ const Login = () => {
                 <h2 className="text-3xl font-semibold text-white text-center mb-3">{state === "Sign Up" ? "Sign Up" : "Login"}</h2>
                 <p className="text-lg text-white text-center mb-6">{state === "Sign Up" ? "Create a new account" : "Welcome back! Please enter your details"}</p>
 
-                <form >
+                <form onSubmit={onSubmitHandler}>
 
                     {state === "Sign Up" && (
                         <div className="mb-4 flex items-center gap-3 w-full px-5 py-3 rounded-full bg-[#333A5C]">

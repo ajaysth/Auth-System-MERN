@@ -7,13 +7,13 @@ const register = async (req,res)=>{
     const {name,email,password} = req.body;
 
     if(!name || !email || !password){
-        return res.status(400).json({message:"Please fill all the fields"});
+        return res.status(400).json({success:false,message:"Please fill all the fields"});
     }
     try{
         const existingUser = await userModel.findOne({email:email})
 
         if(existingUser){
-            return res.status(400).json({message:"User already exists"});
+            return res.status(400).json({success:false,message:"User already exists"});
         }
 
         const hashedpassword = await bcrypt.hash(password,10);
@@ -48,7 +48,7 @@ const register = async (req,res)=>{
         }
         await transporter.sendMail(mailOptions);
 
-        return res.status(201).json({message:"User registered successfully",token:token})
+        return res.status(201).json({success:true,message:"User registered successfully",token:token})
 
 
     }catch(error){
@@ -62,7 +62,7 @@ const login = async (req,res)=>{
     const {email,password}=req.body;
 
     if(!email || !password){
-        return res.status(400).json({message:"Please fill all the fields"});
+        return res.status(400).json({success:false,message:"Please fill all the fields"});
     }
 
     try{
@@ -70,12 +70,12 @@ const login = async (req,res)=>{
             email:email
         })
         if(!user){
-            return res.status(400).json({message:"Invalid credentials"});
+            return res.status(400).json({success:false,message:"Invalid credentials"});
         }
 
         const ismatch = await bcrypt.compare(password,user.password);
         if(!ismatch){
-            return res.status(400).json({message:"Invalid Password"});
+            return res.status(400).json({success:false,message:"Invalid Password"});
         }
 
         const token = jwt.sign({id:user._id},process.env.JWT_SECRET,{
@@ -89,7 +89,7 @@ const login = async (req,res)=>{
             maxAge:7*24*60*60*1000
         })
 
-        res.status(200).json({message:"Login successful",token:token})
+        res.status(200).json({success:true,message:"Login successful",token:token})
 
 
 
@@ -109,7 +109,7 @@ const logout = async (req,res)=>{
             secure:process.env.NODE_ENV === "production",
             sameSite:process.env.NODE_ENV === "production" ? "none" : "strict",
         })
-        return res.status(200).json({message:"Logout successful"})
+        return res.status(200).json({success:true,message:"Logout successful"})
     }catch(error){
         return res.status(500).json({
             message:error.message
@@ -119,10 +119,10 @@ const logout = async (req,res)=>{
 
 const sendVerifyEmail = async (req,res)=>{
     try{
-        const {userId} = req.body;
+        const {userId}= req;
         const user = await userModel.findById(userId);
         if(user.isAccountVerified){
-            return res.json({message:"Account already verified"});
+            return res.json({success:false,message:"Account already verified"});
         }
 
         const otp = String(Math.floor(100000+(Math.random()*900000)))
@@ -140,7 +140,7 @@ const sendVerifyEmail = async (req,res)=>{
         }
         await transporter.sendMail(mailOptions);
 
-        return res.status(200).json({message:"Verification email sent successfully"})
+        return res.status(200).json({success:true,message:"Verification email sent successfully"})
 
     }catch(error){
         return res.status(500).json({
@@ -151,25 +151,26 @@ const sendVerifyEmail = async (req,res)=>{
 
 
 const verifyEmail = async (req,res)=>{
-    const {userId,otp}= req.body;
+    const {otp}= req.body;
+    const {userId}= req;
 
     if(!userId || !otp){
-        return res.status(400).json({message:"Please provide userId and otp"});
+        return res.status(400).json({success:false,message:"Please provide userId and otp"});
     }
 
     try{
         const user = await userModel.findById(userId);
 
         if(!user){
-            return res.status(400).json({message:"Invalid userId. User not found"});
+            return res.status(400).json({success:false,message:"Invalid userId. User not found"});
         }
 
         if(user.verifyOtp === "" || user.verifyOtp !== otp){
-            return res.status(400).json({message:"Invalid OTP"});
+            return res.status(400).json({success:false,message:"Invalid OTP"});
         }
 
         if (user.verifyOtpExpiresAt < Date.now()){
-            return res.status(400).json({message:"OTP has expired. Please request a new one."});
+            return res.status(400).json({success:false,message:"OTP has expired. Please request a new one."});
         }
 
         user.isAccountVerified = true;
@@ -178,7 +179,7 @@ const verifyEmail = async (req,res)=>{
 
         await user.save();
 
-        return res.status(200).json({message:"Account verified successfully"})
+        return res.status(200).json({success:true,message:"Account verified successfully"})
 
     }catch(error){
     return res.status(500).json({
@@ -190,9 +191,13 @@ const verifyEmail = async (req,res)=>{
 //check wether the user is verified or not
 const isAuthenticated =  async (req,res)=>{
     try{
-        return res.status(200).json({isAuthenticated:true})
+        return res.status(200).json({
+            success: true,
+            isAuthenticated: true
+        })
     }catch(error){
         return res.status(500).json({
+            success:false,
             message:error.message
         })
     }
@@ -202,12 +207,12 @@ const isAuthenticated =  async (req,res)=>{
 const sendResetOtp = async (req,res)=>{
     const {email} = req.body;
     if(!email){
-        return res.status(400).json({message:"Please provide email"});
+        return res.status(400).json({success:false,message:"Please provide email"});
     }
     try{
         const user = await userModel.findOne({email:email});
         if(!user){
-            return res.status(400).json({message:"User not found"});
+            return res.status(400).json({success:false,message:"User not found"});
         }
 
         const otp = String(Math.floor(100000+(Math.random()*900000)))
@@ -225,7 +230,7 @@ const sendResetOtp = async (req,res)=>{
         }
         await transporter.sendMail(mailOptions);
 
-        return res.status(200).json({message:"Reset OTP sent successfully"})
+        return res.status(200).json({success:true,message:"Reset OTP sent successfully"})
 
     }catch(error){
         return res.status(500).json({
@@ -239,21 +244,21 @@ const resetPassword = async (req,res)=>{
     const {otp,email,resetPassword} = req.body;
     
     if(!otp || !email || !resetPassword){
-        return res.status(400).json({message:"Please provide otp,email and new password"});
+        return res.status(400).json({success:false,message:"Please provide otp,email and new password"});
     }
 
     try{
         const user  = await userModel.findOne({email:email});
         if(!user){
-            return res.status(400).json({message:"User not found"});
+            return res.status(400).json({success:false,message:"User not found"});
         }
 
         if(user.resetOtp === "" || user.resetOtp !== otp){
-            return res.status(400).json({message:"Invalid OTP"});
+            return res.status(400).json({success:false,message:"Invalid OTP"});
         }
 
         if(user.resetOtpExpiresAt < Date.now()){
-            return res.status(400).json({message:"OTP has expired. Please request a new one."});
+            return res.status(400).json({success:false,message:"OTP has expired. Please request a new one."});
         }
 
         const hashedPassword = await bcrypt.hash(resetPassword,10);
@@ -263,7 +268,7 @@ const resetPassword = async (req,res)=>{
 
         await user.save();
 
-        return res.status(200).json({message:"Password reset successful"})
+        return res.status(200).json({success:true,message:"Password reset successful"})
 
     }catch(error){
         return res.status(500).json({

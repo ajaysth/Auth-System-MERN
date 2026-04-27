@@ -12,7 +12,7 @@ router.post("/login",login)
 router.post("/logout",logout)
 router.post("/send-verify-email",userAuth,sendVerifyEmail)
 router.post("/verify-email",userAuth,verifyEmail)
-router.post("/isAuthenticated",userAuth,isAuthenticated)
+router.get("/isAuthenticated",userAuth,isAuthenticated)
 router.post("/send-reset-otp",sendResetOtp)
 router.post("/reset-password",resetPassword)
 
