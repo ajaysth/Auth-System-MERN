@@ -10,7 +10,7 @@ const Emailverify = () => {
     useEffect(() => {
         axios.defaults.withCredentials = true;
     }, []);
-    const { backend_url, getUserData } = useAppContext()
+    const { backend_url, isLoggedIn, getUserData, userdata } = useAppContext()
     const [otp, setOtp] = useState(new Array(6).fill(""));
 
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -70,6 +70,12 @@ const Emailverify = () => {
         }
 
     }
+
+    useEffect(() => {
+        if (isLoggedIn && userdata && userdata.isAccountVerified) {
+            navigate("/");
+        }
+    }, [isLoggedIn, userdata]);
     return (
         <div className="flex items-center justify-center min-h-screen px-0 sm:p-6 bg-gradient-to-br from-red-300">
             <img onClick={() => navigate("/")} src={assets.logo} className="absolute left-20 md:left-5 top-5 w-32 cursor-pointer md:w-28" alt="" />
